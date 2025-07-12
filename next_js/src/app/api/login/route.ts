@@ -1,8 +1,4 @@
 import { NextResponse } from 'next/server';
-import sqlite3 from 'sqlite3';
-import { open } from 'sqlite';
-import bcrypt from 'bcrypt';
-import path from 'path';
 
 // Define the POST handler for the login route
 export async function POST(request: Request) {
@@ -14,33 +10,24 @@ export async function POST(request: Request) {
   }
 
   try {
-    const dbPath = path.join(process.cwd(), '../fast_api/test.db'); // Adjust this path as needed
-    // Open the SQLite database
-    const db = await open({
-      filename: dbPath,
-      driver: sqlite3.Database,
+    // Call the FastAPI backend for authentication
+    const response = await fetch('http://localhost:8000/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, password }),
     });
 
-    // Query the user by email
-    const user = await db.get('SELECT * FROM users WHERE email = ?', email);
+    const data = await response.json();
 
-    // Check if the user exists
-    if (!user) {
-      return NextResponse.json({ error: 'Invalid email or password' }, { status: 400 });
+    if (response.ok) {
+      return NextResponse.json({ message: 'Login successful' }, { status: 200 });
+    } else {
+      return NextResponse.json({ error: data.detail || 'Invalid email or password' }, { status: response.status });
     }
-
-    // Validate the password against the hashed password stored in the database
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-
-    // Check if the password is valid
-    if (!isPasswordValid) {
-      return NextResponse.json({ error: 'Invalid email or password' }, { status: 400 });
-    }
-
-    // If login is successful
-    return NextResponse.json({ message: 'Login successful' }, { status: 200 });
   } catch (error) {
-    console.error('Database error:', error); // Log the error for debugging
+    console.error('Authentication error:', error); // Log the error for debugging
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 }

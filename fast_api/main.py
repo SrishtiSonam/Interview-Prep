@@ -52,12 +52,8 @@ app.add_middleware(
 # Create the database tables
 Base.metadata.create_all(bind=engine)
 
-# For password hashing - using sha256_crypt as fallback if bcrypt is not available
-try:
-    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-except Exception:
-    # Fallback to sha256_crypt if bcrypt is not available
-    pwd_context = CryptContext(schemes=["sha256_crypt"], deprecated="auto")
+# For password hashing
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # Resume evaluation models and setup
 class ResumeEvaluation(BaseModel):
@@ -97,14 +93,11 @@ Important guidelines:
 Ensure the response is in valid JSON format with all sections properly formatted as arrays."""
 
 prompt = ChatPromptTemplate.from_template(template=template)
-
-# Initialize model function to avoid import issues
-def get_model():
-    return ChatGoogleGenerativeAI(
-        model="gemini-pro",
-        google_api_key=GOOGLE_API_KEY,
-        temperature=0
-    )
+model = ChatGoogleGenerativeAI(
+    model="gemini-pro",
+    google_api_key=GOOGLE_API_KEY,
+    temperature=0
+)
 
 # Utility functions
 def get_db():
@@ -272,8 +265,7 @@ async def evaluate_resume(job_description: str = Form(...), resume: UploadFile =
             format_instructions=parser.get_format_instructions()
         )
         
-        model_instance = get_model()
-        response = model_instance.invoke(input=messages)
+        response =  model.invoke(input = messages)
         
         try:
             parsed_response = parser.parse(response.content)

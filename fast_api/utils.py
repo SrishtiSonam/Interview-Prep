@@ -3,6 +3,8 @@ from pypdf import PdfReader
 from datetime import date
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.prompts import PromptTemplate
+# from langchain.chains. import LLMChain
+from langchain.prompts import PromptTemplate
 from langchain.output_parsers import PydanticOutputParser
 from pydantic import BaseModel, Field
 from typing import List
@@ -11,17 +13,17 @@ import json
 from dotenv import load_dotenv
 import os
 import logging.handlers
-
 # Get API key
 load_dotenv()
 
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 if not GOOGLE_API_KEY:
     raise ValueError("GOOGLE_API_KEY not found in environment variables")
+# Initialize the Google GenAI API with your API key
+# gemini_api_key = "AIzaSyA7I6py7FzVOAejYLJ5Rr5kV6Hb0W4qevA"
 
-# Initialize the Gemini model - moved to function level to avoid import issues
-def get_llm():
-    return ChatGoogleGenerativeAI(model="gemini-1.5-pro", google_api_key=GOOGLE_API_KEY)
+# Initialize the Gemini model
+llm = ChatGoogleGenerativeAI(model="models/gemini-1.5-pro", api_key=GOOGLE_API_KEY)
 # Function to extract information from the resume
 def extract_resume_info(resume_path):
     reader = PdfReader(resume_path)
@@ -97,9 +99,12 @@ template = PromptTemplate(
 
 # Function to generate MCQs using LangChain and GenAI
 def generate_mcqs(job_role, job_description, experience_level):
-    # Get LLM instance
-    llm = get_llm()
-    
+    # Prepare the chain
+    # llm_chain = LLMChain(
+    #     llm=llm,  # Uses Google's GenAI
+    #     prompt=template
+    # )
+
     formatted_prompt = prompt_template.format(
         job_role=job_role,
         job_description=job_description,
@@ -107,8 +112,15 @@ def generate_mcqs(job_role, job_description, experience_level):
     )
 
     print(formatted_prompt)
-    result = llm.invoke(input=formatted_prompt)
+    result = llm.invoke(input =  formatted_prompt)
     print(result)
+
+    # Run the chain with user inputs
+    # result = llm_chain.run({
+    #     "job_role": job_role,
+    #     "job_description": job_description,
+    #     "experience_level": experience_level
+    # })
 
     return result.content
 

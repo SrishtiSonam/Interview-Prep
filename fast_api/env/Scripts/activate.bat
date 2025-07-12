@@ -8,7 +8,7 @@ if defined _OLD_CODEPAGE (
     "%SystemRoot%\System32\chcp.com" 65001 > nul
 )
 
-set "VIRTUAL_ENV=C:\Users\Srish\OneDrive\Desktop\Projects\Interview-Prep\fast_api\env"
+set "VIRTUAL_ENV=C:\Users\Srish\OneDrive\Desktop\AI-Career-Assistant-with-Nextjs-FastAPI-main\fast_api\env"
 
 if not defined PROMPT set PROMPT=$P$G
 

@@ -20,9 +20,7 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 if not GOOGLE_API_KEY:
     raise ValueError("GOOGLE_API_KEY not found in environment variables")
 
-# Initialize model function to avoid import issues
-def get_llm():
-    return GoogleGenerativeAI(model="gemini-pro", google_api_key=GOOGLE_API_KEY)
+llm = GoogleGenerativeAI(model="gemini-pro", api_key=GOOGLE_API_KEY)
 
 class State(TypedDict):
     messages: Annotated[Sequence[str], "The messages in the conversation"]
@@ -51,8 +49,7 @@ def resume_builder(state: State) -> State:
             "Improvement strategy (if any):\n{improvement_strategy}\n\n"
             "Generate a well-formatted resume:"
         )
-        llm_instance = get_llm()
-        resume = llm_instance.invoke(prompt.format(input_data=input_data, improvement_strategy=improvement_strategy))
+        resume = llm.invoke(prompt.format(input_data=input_data, improvement_strategy=improvement_strategy))
         resume_content = get_content(resume)
         # logger.debug(f"Resume generated: {resume_content[:100]}...")  # Log first 100 characters
         return {
@@ -87,8 +84,7 @@ def ats_checker(state: State) -> State:
             "Resume:\n{resume}\n\n"
             "Provide your analysis, feedback, and percentage match:"
         )
-        llm_instance = get_llm()
-        feedback = llm_instance.invoke(prompt.format(resume=resume))
+        feedback = llm.invoke(prompt.format(resume=resume))
         feedback_content = get_content(feedback)
         
         # Extract score using regex
@@ -139,8 +135,7 @@ def improvement(state: State) -> State:
         "ATS Feedback:\n{ats_feedback}\n\n"
         "Improvement strategy:"
     )
-    llm_instance = get_llm()
-    improvement_strategy = llm_instance.invoke(prompt.format(ats_feedback=ats_feedback))
+    improvement_strategy = llm.invoke(prompt.format(ats_feedback=ats_feedback))
     return {
         "messages": state["messages"],
         "resume": state["resume"],
