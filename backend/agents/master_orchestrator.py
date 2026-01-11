@@ -80,19 +80,28 @@ class MasterOrchestrator:
         
         # 3. Tech Lead Agent
         tech_result = self.tech_lead_agent.analyze(resume_text)
-        agent_outputs.append(self._format_agent_output("TECH_LEAD_AGENT", tech_result))
+        agent_outputs.append(self._format_agent_output("TECH LEAD_AGENT", tech_result))
         
-        # 4. Hiring Manager Agent (uses scores from other agents)
+        # 4. Resume Coach Agent (early for feature extraction)
+        coach_result = self.resume_coach_agent.improve_resume(resume_text)
+        agent_outputs.append(self._format_agent_output("RESUME_COACH_AGENT", coach_result))
+        
+        # 5. Hiring Manager Agent (uses scores AND full outputs for ML)
+        # Prepare agent outputs dict for ML feature extraction
+        ml_agent_outputs = {
+            'ats': ats_result,
+            'hr': hr_result,
+            'tech': tech_result,
+            'coach': coach_result
+        }
+        
         decision_result = self.hiring_manager_agent.make_decision(
             ats_score=ats_result["score"],
             hr_score=hr_result["score"],
-            tech_score=tech_result["score"]
+            tech_score=tech_result["score"],
+            agent_outputs=ml_agent_outputs  # Pass full outputs for ML
         )
         agent_outputs.append(self._format_agent_output("HIRING_MANAGER_AGENT", decision_result))
-        
-        # 5. Resume Coach Agent
-        coach_result = self.resume_coach_agent.improve_resume(resume_text)
-        agent_outputs.append(self._format_agent_output("RESUME_COACH_AGENT", coach_result))
         
         # Generate final orchestrator response
         final_response = self._generate_resume_final_response(

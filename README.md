@@ -1,11 +1,12 @@
-# ScholarAI - Multi-Agent Autonomous AI System
+# ScholarAI - ML-Powered Multi-Agent Hiring Intelligence System
 
-A sophisticated autonomous AI system that simulates a team of 11 specialized agents for resume review, career guidance, and technical research. Built for students with 100% free and local-first tools.
+A sophisticated AI system featuring **machine learning-powered hiring decisions** with a team of 11 specialized agents for resume analysis, career guidance, and technical research. Now with ML confidence scores, feature importance, and data-driven hiring predictions.
 
-![ScholarAI Demo](https://img.shields.io/badge/Status-Ready-success)
+![ScholarAI Demo](https://img.shields.io/badge/Status-ML--Powered-success)
 ![License](https://img.shields.io/badge/License-MIT-blue)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.109-009688)
 ![React](https://img.shields.io/badge/React-18-61DAFB)
+![ML](https://img.shields.io/badge/ML-RandomForest-orange)
 
 ## 🤖 Multi-Agent Architecture
 
@@ -55,6 +56,7 @@ ScholarAI operates as a coordinated team of specialized AI agents, each with spe
 - Python 3.8+
 - Node.js 18+
 - npm or yarn
+- **ML Requirement**: 100MB+ specific training data (generated automatically)
 
 ### Backend Setup
 
@@ -68,6 +70,9 @@ venv\Scripts\activate  # Windows
 
 # Install dependencies
 pip install -r requirements.txt
+
+# Setup ML System (Generate Data & Train Model)
+python setup_ml.py
 
 # Run FastAPI server
 python main.py

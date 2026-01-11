@@ -15,19 +15,21 @@ class HiringManagerAgent:
         self.SHORTLIST_THRESHOLD = 70  # Overall score >= 70 -> Shortlist
         self.STRONG_HIRE_THRESHOLD = 85  # Overall score >= 85 -> Strong hire
     
-    def make_decision(self, ats_score: int, hr_score: int, tech_score: int) -> Dict[str, Any]:
+    def make_decision(self, ats_score: int, hr_score: int, tech_score: int, 
+                     agent_outputs: Dict[str, Any] = None) -> Dict[str, Any]:
         """
-        Make final hiring decision based on all agent scores
+        Make final hiring decision using ML model (with rule-based fallback)
         
         Args:
             ats_score: Score from ATS Agent (0-100)
             hr_score: Score from HR Agent (0-100)
             tech_score: Score from Tech Lead Agent (0-100)
+            agent_outputs: Full agent outputs for ML feature extraction (optional)
             
         Returns:
             Dictionary with decision and detailed reasoning
         """
-        # Calculate weighted overall score
+        # Calculate weighted overall score (for backward compatibility)
         # ATS: 20%, HR: 25%, Tech: 55% (tech skills most important)
         overall_score = int(
             ats_score * 0.20 +
@@ -35,11 +37,45 @@ class HiringManagerAgent:
             tech_score * 0.55
         )
         
-        # Make decision
-        decision = self._determine_decision(overall_score, ats_score, hr_score, tech_score)
+        # Try ML-based decision first
+        ml_decision = None
+        ml_confidence = None
+        ml_top_factors = []
+        use_ml = False
+        
+        if agent_outputs:
+            try:
+                from ml.inference_service import get_inference_service
+                
+                inference_service = get_inference_service()
+                if inference_service.is_loaded:
+                    decision, confidence, top_factors = inference_service.predict_from_agent_outputs(
+                        agent_outputs
+                    )
+                    ml_decision = decision
+                    ml_confidence = confidence
+                    ml_top_factors = top_factors
+                    use_ml = True
+            except Exception as e:
+                print(f"⚠️ ML prediction failed, using rule-based fallback: {e}")
+        
+        # Fallback to rule-based decision
+        if not use_ml:
+            decision = self._determine_decision(overall_score, ats_score, hr_score, tech_score)
+            ml_confidence = overall_score  # Use overall score as confidence
+        else:
+            decision = ml_decision
         
         # Generate reasoning
-        reasoning = self._generate_reasoning(decision, overall_score, ats_score, hr_score, tech_score)
+        if use_ml:
+            reasoning = self._generate_ml_reasoning(
+                decision, ml_confidence, ml_top_factors, 
+                ats_score, hr_score, tech_score
+            )
+        else:
+            reasoning = self._generate_reasoning(
+                decision, overall_score, ats_score, hr_score, tech_score
+            )
         
         # Identify deal-breakers
         deal_breakers = self._check_deal_breakers(ats_score, hr_score, tech_score)
@@ -47,7 +83,7 @@ class HiringManagerAgent:
         # Generate next steps
         next_steps = self._generate_next_steps(decision, deal_breakers)
         
-        return {
+        result = {
             "agent": self.name,
             "decision": decision,
             "overall_score": overall_score,
@@ -60,6 +96,20 @@ class HiringManagerAgent:
             "deal_breakers": deal_breakers,
             "next_steps": next_steps
         }
+        
+        # Add ML-specific fields if ML was used
+        if use_ml:
+            result["ml_confidence"] = round(ml_confidence, 2)
+            result["ml_enabled"] = True
+            result["top_contributing_factors"] = [
+                {"feature": factor[0], "contribution": factor[1]}
+                for factor in ml_top_factors
+            ]
+        else:
+            result["ml_enabled"] = False
+        
+        return result
+
     
     def _determine_decision(self, overall_score: int, ats_score: int, 
                            hr_score: int, tech_score: int) -> str:
@@ -184,3 +234,41 @@ class HiringManagerAgent:
                     "Send standard rejection",
                     "Keep in talent pool for future junior roles"
                 ]
+    
+    def _generate_ml_reasoning(self, decision: str, ml_confidence: float,
+                              top_factors: List, ats_score: int, hr_score: int, 
+                              tech_score: int) -> str:
+        """Generate ML-powered reasoning with feature importance"""
+        reasoning = f"**ML-Powered Decision: {decision}** (Confidence: {ml_confidence:.1f}%)\n\n"
+        
+        if decision == "STRONG_HIRE":
+            reasoning += (
+                f"🎯 Exceptional candidate identified by ML model with {ml_confidence:.1f}% confidence. "
+                f"Strong performance across all evaluation criteria: "
+                f"ATS ({ats_score}/100), HR ({hr_score}/100), Tech ({tech_score}/100). "
+            )
+        elif decision == "SHORTLIST":
+            reasoning += (
+                f"✅ Solid candidate with good potential (ML Confidence: {ml_confidence:.1f}%). "
+                f"Meets key requirements with room for improvement in specific areas. "
+            )
+        elif decision == "MAYBE":
+            reasoning += (
+                f"⚠️ Borderline candidate (ML Confidence: {ml_confidence:.1f}%). "
+                f"Shows promise but has notable gaps: "
+                f"ATS ({ats_score}/100), HR ({hr_score}/100), Tech ({tech_score}/100). "
+            )
+        else:  # REJECT
+            reasoning += (
+                f"❌ Not recommended (ML Confidence: {ml_confidence:.1f}%). "
+                f"Significant gaps in critical areas. "
+            )
+        
+        # Add top contributing factors
+        if top_factors:
+            reasoning += "\n\n**Top Contributing Factors:**\n"
+            for i, (feature_name, contribution) in enumerate(top_factors, 1):
+                readable_name = feature_name.replace('_', ' ').title()
+                reasoning += f"{i}. {readable_name} (contribution: {contribution:.4f})\n"
+        
+        return reasoning
